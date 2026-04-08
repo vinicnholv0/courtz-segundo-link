@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Perfil - Courtz</title>
+
+  <style>
+    body {
+      background:#111;
+      color:white;
+      text-align:center;
+      font-family:Arial;
+      margin:0;
+    }
+
+    .topo {
+      position:absolute;
+      top:10px;
+      left:10px;
+    }
+
+    button {
+      background:orange;
+      border:none;
+      padding:10px;
+      border-radius:10px;
+      cursor:pointer;
+      margin:5px;
+    }
+
+    input {
+      margin:10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<button class="topo" onclick="voltar()">←</button>
+
+<h1>🏀 Meu Perfil</h1>
+
+<img id="fotoPerfil" width="100" height="100" style="border-radius:50%;">
+
+<br><br>
+
+<input type="file" id="fotoInput">
+<br>
+<button onclick="salvarFoto()">Salvar Foto</button>
+
+<h2 id="nome"></h2>
+<p id="email"></p>
+
+<br>
+
+<button onclick="logout()">Sair</button>
+
+<!-- FIREBASE (VERSÃO 8 - PADRÃO DO SEU APP) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+// 🔥 SUA CONFIG REAL
+const firebaseConfig = {
+  apiKey: "AIzaSyBwk3tJpdGLm7p74rQ1OevliuXZOoNQ7jk",
+  authDomain: "courtz-9230f.firebaseapp.com",
+  projectId: "courtz-9230f",
+  storageBucket: "courtz-9230f.appspot.com",
+  messagingSenderId: "476659657563",
+  appId: "1:476659657563:web:173b5e390796e5191f487e"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// VOLTAR
+function voltar() {
+  window.location.href = "feed.html";
+}
+
+// CARREGAR USUÁRIO
+auth.onAuthStateChanged(user => {
+  if (user) {
+    db.collection("usuarios").doc(user.uid).get().then(doc => {
+
+      if (!doc.exists) {
+        alert("Usuário não encontrado!");
+        return;
+      }
+
+      let dados = doc.data();
+
+      document.getElementById("nome").innerText = dados.nome || "Sem nome";
+      document.getElementById("email").innerText = dados.email || "Sem email";
+
+      // FOTO
+      if (dados.foto) {
+        document.getElementById("fotoPerfil").src = dados.foto;
+      } else {
+        document.getElementById("fotoPerfil").src =
+        "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+      }
+
+      // salvar no localStorage (usado no feed/eventos)
+      localStorage.setItem("usuario", JSON.stringify({
+        nome: dados.nome,
+        email: dados.email,
+        uid: user.uid
+      }));
+
+    }).catch(err => {
+      console.error(err);
+      alert("Erro ao carregar perfil");
+    });
+
+  } else {
+    window.location.href = "index.html";
+  }
+});
+
+// SALVAR FOTO
+function salvarFoto() {
+  let file = document.getElementById("fotoInput").files[0];
+
+  if (!file) {
+    alert("Escolhe uma imagem primeiro!");
+    return;
+  }
+
+  let reader = new FileReader();
+
+  reader.onload = function() {
+    let user = auth.currentUser;
+
+    if (!user) {
+      alert("Usuário não logado!");
+      return;
+    }
+
+    db.collection("usuarios").doc(user.uid).update({
+      foto: reader.result
+    }).then(() => {
+      document.getElementById("fotoPerfil").src = reader.result;
+      alert("Foto atualizada!");
+    });
+  };
+
+  reader.readAsDataURL(file);
+}
+
+// LOGOUT
+function logout() {
+  auth.signOut().then(() => {
+    localStorage.removeItem("usuario");
+    window.location.href = "index.html";
+  });
+}
+</script>
+
+</body>
+</html>

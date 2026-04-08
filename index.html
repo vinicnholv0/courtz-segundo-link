@@ -1,0 +1,102 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Courtz</title>
+
+  <style>
+  #splash {
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#000;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:9999;
+}
+
+#splash img {
+  width:150px;
+  animation:zoom 1.5s ease;
+}
+
+@keyframes zoom {
+  0% { transform:scale(0.5); opacity:0; }
+  100% { transform:scale(1); opacity:1; }
+}
+   body {
+      background:#111;
+      color:white;
+      text-align:center;
+      font-family:Arial;
+    }
+
+    .botao {
+      background:orange;
+      border:none;
+      padding:15px;
+      margin:10px;
+      border-radius:10px;
+      cursor:pointer;
+      font-size:16px;
+    }
+  </style>
+</head>
+
+<body>
+<div id="splash">
+  <img src="logo.png">
+</div>
+<h1>🏀 Courtz</h1>
+<p>Conectando jogadores</p>
+
+<div id="botoes">
+  <button class="botao" onclick="irLogin()">Entrar</button>
+  <button class="botao" onclick="irCadastro()">Criar Conta</button>
+</div>
+
+<!-- ✅ FIREBASE VERSÃO 8 -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+<script>
+// 🔥 SUA CONFIG REAL
+const firebaseConfig = {
+  apiKey: "AIzaSyBwk3tJpdGLm7p74rQ1OevliuXZOoNQ7jk",
+  authDomain: "courtz-9230f.firebaseapp.com",
+  projectId: "courtz-9230f",
+  storageBucket: "courtz-9230f.appspot.com",
+  messagingSenderId: "476659657563",
+  appId: "1:476659657563:web:173b5e390796e5191f487e"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+// 🔥 AUTO LOGIN
+auth.onAuthStateChanged(user => {
+  if (user) {
+    window.location.href = "feed.html";
+  }
+});
+
+// BOTÕES
+function irLogin() {
+  window.location.href = "login.html";
+}
+
+function irCadastro() {
+  window.location.href = "cadastro.html";
+}
+window.onload = () => {
+  setTimeout(() => {
+    document.getElementById("splash").style.display = "none";
+  }, 2000);   
+};
+</script>
+
+</body>
+</html>

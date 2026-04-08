@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login - Courtz</title>
+</head>
+
+<body style="background:#111; color:white; text-align:center; font-family:Arial;">
+
+  <h1>🏀 Login</h1>
+
+  <input id="email" type="email" placeholder="Email"><br><br>
+  <input id="senha" type="password" placeholder="Senha"><br><br>
+
+  <button onclick="entrar()">Entrar</button>
+
+  <!-- FIREBASE -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBwk3tJpdGLm7p74rQ1OevliuXZOoNQ7jk",
+    authDomain: "courtz-9230f.firebaseapp.com",
+    projectId: "courtz-9230f",
+    storageBucket: "courtz-9230f.appspot.com",
+    messagingSenderId: "476659657563",
+    appId: "1:476659657563:web:173b5e390796e5191f487e"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // 🔐 LOGIN
+  function entrar() {
+    let email = document.getElementById("email").value;
+    let senha = document.getElementById("senha").value;
+
+    if (!email || !senha) {
+      alert("Preencha todos os campos!");
+      return;
+    }
+
+    auth.signInWithEmailAndPassword(email, senha)
+    .then((userCredential) => {
+      let user = userCredential.user;
+
+      db.collection("usuarios").doc(user.uid).get()
+      .then(doc => {
+
+        if (!doc.exists) {
+          alert("Usuário não encontrado no banco!");
+          return;
+        }
+
+        let dados = doc.data();
+
+        localStorage.setItem("usuario", JSON.stringify({
+          nome: dados.nome,
+          email: dados.email,
+          uid: user.uid
+        }));
+
+        alert("Login realizado!");
+        window.location.href = "feed.html";
+      });
+    })
+    .catch((error) => {
+      alert("Erro: " + error.message);
+    });
+  }
+
+  // ❌ REMOVIDO AUTO REDIRECIONAMENTO BUGADO
+  // auth.onAuthStateChanged(...) FOI REMOVIDO
+
+  </script>
+
+</body>
+</html>

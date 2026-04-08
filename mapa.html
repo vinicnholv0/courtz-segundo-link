@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mapa - Courtz</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: Arial;
+      text-align: center;
+    }
+
+    #map {
+      height: 90vh;
+      width: 100%;
+    }
+
+    .btn {
+      background: orange;
+      border: none;
+      padding: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .topo {
+      position: absolute;
+      top: 10px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 10px;
+      box-sizing: border-box;
+      z-index: 1000;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="topo">
+  <!-- VOLTAR -->
+  <button class="btn" onclick="voltar()">←</button>
+
+  <!-- PERFIL -->
+  <button onclick="irPerfil()" style="background:none; border:none;">
+    <img id="iconePerfil" width="35" height="35" style="border-radius:50%;">
+  </button>
+</div>
+
+<h2>🏀 Quadras próximas</h2>
+
+<button class="btn" onclick="modoAdicionar()">Adicionar Quadra</button>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+function voltar() {
+  window.history.back();
+}
+
+function irPerfil() {
+  window.location.href = "perfil.html";
+}
+
+let map;
+let adicionando = false;
+let marcadores = [];
+
+// 📍 PEGAR LOCALIZAÇÃO
+navigator.geolocation.getCurrentPosition(iniciarMapa, erroLocalizacao);
+
+// ✅ SUCESSO
+function iniciarMapa(pos) {
+  let lat = pos.coords.latitude;
+  let lng = pos.coords.longitude;
+
+  map = L.map('map').setView([lat, lng], 15);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  // 📍 MARCADOR DO USUÁRIO
+  L.marker([lat, lng]).addTo(map)
+    .bindPopup("📍 Você está aqui")
+    .openPopup();
+
+  carregarQuadras();
+
+  // 👆 CLICK NO MAPA
+  map.on('click', function(e) {
+    if (adicionando) {
+      let quadras = JSON.parse(localStorage.getItem("quadras")) || [];
+
+      let nova = {
+        lat: e.latlng.lat,
+        lng: e.latlng.lng
+      };
+
+      quadras.push(nova);
+      localStorage.setItem("quadras", JSON.stringify(quadras));
+
+      carregarQuadras();
+      adicionando = false;
+
+      alert("Quadra adicionada!");
+    }
+  });
+}
+
+// ❌ ERRO LOCALIZAÇÃO
+function erroLocalizacao() {
+  alert("Não foi possível acessar sua localização 😢");
+
+  // fallback (Rio de Janeiro)
+  let lat = -22.90;
+  let lng = -43.20;
+
+  map = L.map('map').setView([lat, lng], 12);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  carregarQuadras();
+}
+
+// ➕ MODO ADICIONAR
+function modoAdicionar() {
+  adicionando = true;
+  alert("Clique no mapa para marcar a quadra!");
+}
+
+// 🔄 CARREGAR QUADRAS
+function carregarQuadras() {
+  if (!map) return;
+
+  let quadras = JSON.parse(localStorage.getItem("quadras")) || [];
+
+  // limpar antigos
+  marcadores.forEach(m => map.removeLayer(m));
+  marcadores = [];
+
+  quadras.forEach(function(q) {
+    let marker = L.marker([q.lat, q.lng]).addTo(map)
+      .bindPopup(`
+        <b>🏀 Quadra</b><br><br>
+        <button onclick="abrirRota(${q.lat}, ${q.lng})" style="background:orange; border:none; padding:5px; border-radius:5px;">
+          Ir até aqui
+        </button>
+      `);
+
+    marcadores.push(marker);
+  });
+}
+
+// 🚀 ABRIR ROTA
+function abrirRota(lat, lng) {
+  let url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  window.open(url, "_blank");
+}
+
+// 👤 FOTO PERFIL
+window.onload = function() {
+  let foto = localStorage.getItem("fotoPerfil");
+  let icone = document.getElementById("iconePerfil");
+
+  if (icone) {
+    icone.src = foto || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+  }
+};
+</script>
+
+</body>
+</html>

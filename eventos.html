@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Eventos - Courtz</title>
+
+  <style>
+    body {
+      background:#111;
+      color:white;
+      font-family:Arial;
+      text-align:center;
+      margin:0;
+    }
+
+    button {
+      background:orange;
+      border:none;
+      padding:10px;
+      border-radius:10px;
+      cursor:pointer;
+      margin:5px;
+    }
+
+    .evento {
+      background:#222;
+      margin:10px;
+      padding:10px;
+      border-radius:10px;
+    }
+
+    .topo {
+      position:absolute;
+      top:10px;
+      left:10px;
+    }
+
+    .jogador {
+      display:inline-block;
+      margin:5px;
+      text-align:center;
+    }
+
+    .jogador img {
+      width:40px;
+      height:40px;
+      border-radius:50%;
+    }
+
+    .chat {
+      background:#111;
+      padding:10px;
+      margin-top:10px;
+      border-radius:10px;
+      max-height:150px;
+      overflow-y:auto;
+      text-align:left;
+    }
+
+    input {
+      padding:8px;
+      border-radius:8px;
+      border:none;
+      margin:5px;
+    }
+  </style>
+</head>
+
+<body>
+
+<button class="topo" onclick="voltar()">←</button>
+
+<h1>🏀 Eventos e Jogos</h1>
+
+<button onclick="abrirEvento()">Criar Evento</button>
+
+<div id="areaEvento" style="display:none;">
+  <input id="nomeEvento" placeholder="Nome do evento"><br>
+  <input id="localEvento" placeholder="Local"><br>
+  <input id="dataEvento" type="date"><br>
+  <input id="limiteEvento" type="number" placeholder="Limite de jogadores"><br>
+
+  <button onclick="criarEvento()">Salvar</button>
+</div>
+
+<hr>
+
+<div id="listaEventos"></div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBwk3tJpdGLm7p74rQ1OevliuXZOoNQ7jk",
+  authDomain: "courtz-9230f.firebaseapp.com",
+  projectId: "courtz-9230f",
+  storageBucket: "courtz-9230f.appspot.com",
+  messagingSenderId: "476659657563",
+  appId: "1:476659657563:web:173b5e390796e5191f487e"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// VOLTAR
+function voltar() {
+  window.location.href = "feed.html";
+}
+
+// MOSTRAR FORM
+function abrirEvento() {
+  let area = document.getElementById("areaEvento");
+  area.style.display = area.style.display === "none" ? "block" : "none";
+}
+
+// CRIAR EVENTO
+function criarEvento() {
+  let nome = document.getElementById("nomeEvento").value;
+  let local = document.getElementById("localEvento").value;
+  let data = document.getElementById("dataEvento").value;
+  let limite = document.getElementById("limiteEvento").value;
+
+  if (!nome || !local || !data) {
+    alert("Preencha todos os campos!");
+    return;
+  }
+
+  db.collection("eventos").add({
+    nome,
+    local,
+    data,
+    limite: limite ? parseInt(limite) : 10,
+    participantes: [],
+    chat: []
+  });
+}
+
+// CARREGAR EVENTOS (TEMPO REAL)
+function carregarEventos() {
+  let container = document.getElementById("listaEventos");
+
+  let usuario = JSON.parse(localStorage.getItem("usuario")) || { nome:"Usuário" };
+
+  db.collection("eventos").orderBy("data").onSnapshot(snapshot => {
+    container.innerHTML = "";
+
+    snapshot.forEach(doc => {
+      let evento = doc.data();
+      let id = doc.id;
+
+      let participantes = evento.participantes || [];
+      let vagas = evento.limite - participantes.length;
+
+      let aviso = vagas === 1 ? "⚠️ Falta 1 jogador!" : "";
+
+      let listaJogadores = participantes.map(p => `
+        <div class="jogador">
+          <img src="${p.foto}">
+          <br>${p.nome}
+        </div>
+      `).join("");
+
+      let chatMensagens = (evento.chat || []).map(m => `
+        <p><strong>${m.nome}:</strong> ${m.msg}</p>
+      `).join("");
+
+      let jaEsta = participantes.find(p => p.nome === usuario.nome);
+      let textoBotao = jaEsta ? "Sair" : "Participar";
+
+      let div = document.createElement("div");
+      div.className = "evento";
+
+      div.innerHTML = `
+        <h3>${evento.nome}</h3>
+        <p>📍 ${evento.local}</p>
+        <p>📅 ${evento.data}</p>
+
+        <p>👥 ${participantes.length}/${evento.limite}</p>
+        <p>🟢 Vagas: ${vagas}</p>
+        <p>${aviso}</p>
+
+        <button onclick="irMapa('${evento.local}')">Ver no mapa</button>
+
+        <div>${listaJogadores}</div>
+
+        <button onclick="toggle('${id}')">${textoBotao}</button>
+
+        <div class="chat">${chatMensagens}</div>
+
+        <input id="msg-${id}" placeholder="Mensagem...">
+        <button onclick="enviar('${id}')">Enviar</button>
+      `;
+
+      container.appendChild(div);
+    });
+  });
+}
+
+// PARTICIPAR / SAIR
+function toggle(id) {
+  let usuario = JSON.parse(localStorage.getItem("usuario")) || { nome:"Usuário" };
+  let foto = localStorage.getItem("fotoPerfil") || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+  let ref = db.collection("eventos").doc(id);
+
+  ref.get().then(doc => {
+    let evento = doc.data();
+    let participantes = evento.participantes || [];
+
+    let index = participantes.findIndex(p => p.nome === usuario.nome);
+
+    if (index !== -1) {
+      participantes.splice(index, 1);
+    } else {
+      if (participantes.length >= evento.limite) {
+        alert("Evento lotado!");
+        return;
+      }
+
+      participantes.push({
+        nome: usuario.nome,
+        foto: foto
+      });
+    }
+
+    ref.update({ participantes });
+  });
+}
+
+// CHAT
+function enviar(id) {
+  let input = document.getElementById("msg-" + id);
+  let texto = input.value;
+
+  if (!texto) return;
+
+  let usuario = JSON.parse(localStorage.getItem("usuario")) || { nome:"Usuário" };
+
+  let ref = db.collection("eventos").doc(id);
+
+  ref.get().then(doc => {
+    let evento = doc.data();
+    let chat = evento.chat || [];
+
+    chat.push({
+      nome: usuario.nome,
+      msg: texto
+    });
+
+    ref.update({ chat }).then(() => {
+      input.value = "";
+    });
+  });
+}
+
+// MAPA
+function irMapa(local) {
+  localStorage.setItem("localEvento", local);
+  window.location.href = "mapa.html";
+}
+
+// INICIAR
+carregarEventos();
+</script>
+
+</body>
+</html>
